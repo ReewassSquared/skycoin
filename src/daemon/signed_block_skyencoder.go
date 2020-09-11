@@ -92,6 +92,8 @@ func encodeSizeSignedBlock(obj *coin.SignedBlock) uint64 {
 			i1 += uint64(len(x1.Out)) * i2
 		}
 
+		i1 += 512
+
 		i0 += i1
 	}
 
@@ -242,6 +244,8 @@ func encodeSignedBlockToBuffer(buf []byte, obj *coin.SignedBlock) error {
 			e.Uint64(x.Hours)
 
 		}
+
+		e.CopyBytes(x.Tweet[:])
 
 	}
 
@@ -498,6 +502,9 @@ func decodeSignedBlock(buf []byte, obj *coin.SignedBlock) (uint64, error) {
 						}
 					}
 				}
+
+				copy(obj.Block.Body.Transactions[z3].Tweet[:], d.Buffer[:512])
+				d.Buffer = d.Buffer[512:]
 			}
 		}
 	}

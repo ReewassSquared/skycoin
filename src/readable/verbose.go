@@ -103,6 +103,8 @@ type BlockTransactionVerbose struct {
 	Sigs []string            `json:"sigs"`
 	In   []TransactionInput  `json:"inputs"`
 	Out  []TransactionOutput `json:"outputs"`
+
+	Tweet string `json:"tweet"`
 }
 
 // NewBlockTransactionVerbose creates BlockTransactionVerbose
@@ -186,6 +188,8 @@ func NewBlockTransactionVerbose(txn coin.Transaction, inputs []visor.Transaction
 		Sigs: sigs,
 		In:   txnInputs,
 		Out:  out,
+
+		Tweet: string(txn.Tweet[:]),
 	}, nil
 }
 

@@ -96,6 +96,7 @@ Defaults to one of the spending addresses (deterministic wallets) or to a new ch
 	createRawTxnCmd.Flags().StringP("many", "m", "", `use JSON string to set multiple receive addresses and coins,
 example: -m '[{"addr":"$addr1", "coins": "10.2"}, {"addr":"$addr2", "coins": "20"}]'`)
 	createRawTxnCmd.Flags().StringP("password", "p", "", "Wallet password")
+	createRawTxnCmd.Flags().StringP("tweet", "t", "", "Tweet to send")
 	createRawTxnCmd.Flags().BoolP("json", "j", false, "Returns the results in JSON format.")
 	createRawTxnCmd.Flags().String("csv", "", "CSV file containing addresses and amounts to send")
 

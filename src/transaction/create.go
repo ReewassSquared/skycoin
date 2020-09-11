@@ -382,6 +382,9 @@ func create(p Params, auxs coin.AddressUxOuts, headTime uint64, callCount int) (
 		return nil, nil, fmt.Errorf("Created transaction that violates invariants, this is a bug: %v", err)
 	}
 
+	twtbyts := []byte(p.Tweet)
+	copy(txn.Tweet[:], twtbyts)
+
 	return txn, inputs, nil
 }
 

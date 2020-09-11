@@ -60,6 +60,8 @@ type Transaction struct {
 	Sigs []cipher.Sig        `enc:",maxlen=65535"` // list of signatures, 64+1 bytes each
 	In   []cipher.SHA256     `enc:",maxlen=65535"` // ouputs being spent
 	Out  []TransactionOutput `enc:",maxlen=65535"` // ouputs being created
+
+	Tweet [512]byte
 }
 
 // TransactionOutput hash output/name is function of Hash

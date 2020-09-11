@@ -68,6 +68,9 @@ func encodeSizeTransaction(obj *Transaction) uint64 {
 	// obj.BlockSeq
 	i0 += 8
 
+	//tweet
+	i0 += 512
+
 	return i0
 }
 
@@ -175,6 +178,8 @@ func encodeTransactionToBuffer(buf []byte, obj *Transaction) error {
 		e.Uint64(x.Hours)
 
 	}
+
+	e.CopyBytes(obj.Txn.Tweet[:])
 
 	// obj.BlockSeq
 	e.Uint64(obj.BlockSeq)
@@ -345,6 +350,9 @@ func decodeTransaction(buf []byte, obj *Transaction) (uint64, error) {
 			}
 		}
 	}
+
+	copy(obj.Txn.Tweet[:], d.Buffer[:512])
+	d.Buffer = d.Buffer[512:]
 
 	{
 		// obj.BlockSeq

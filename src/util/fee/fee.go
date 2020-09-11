@@ -61,13 +61,9 @@ func VerifyTransactionFeeForHours(hours, fee uint64, burnFactor uint32) error {
 
 // RequiredFee returns the coinhours fee required for an amount of hours
 // The required fee is calculated as hours/burnFactor, rounded up.
+// [TWEETCOIN] All transactions require a fee of a single coin hour only.
 func RequiredFee(hours uint64, burnFactor uint32) uint64 {
-	feeHours := hours / uint64(burnFactor)
-	if hours%uint64(burnFactor) != 0 {
-		feeHours++
-	}
-
-	return feeHours
+	return 1
 }
 
 // RemainingHours returns the amount of coinhours leftover after paying the fee for the input.

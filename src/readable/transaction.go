@@ -97,6 +97,8 @@ type Transaction struct {
 	Sigs []string            `json:"sigs"`
 	In   []string            `json:"inputs"`
 	Out  []TransactionOutput `json:"outputs"`
+
+	Tweet string `json:"tweet"`
 }
 
 // NewTransaction creates a readable transaction
@@ -141,9 +143,10 @@ func NewTransaction(txn coin.Transaction, isGenesis bool) (*Transaction, error) 
 		Hash:      txID.Hex(),
 		InnerHash: txn.InnerHash.Hex(),
 
-		Sigs: sigs,
-		In:   in,
-		Out:  out,
+		Sigs:  sigs,
+		In:    in,
+		Out:   out,
+		Tweet: string(txn.Tweet[:]),
 	}, nil
 }
 

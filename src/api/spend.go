@@ -57,6 +57,8 @@ type CreatedTransaction struct {
 	Sigs []string                   `json:"sigs"`
 	In   []CreatedTransactionInput  `json:"inputs"`
 	Out  []CreatedTransactionOutput `json:"outputs"`
+
+	Tweet string `json:"tweet"`
 }
 
 // NewCreatedTransaction returns a CreatedTransaction
@@ -123,6 +125,8 @@ func NewCreatedTransaction(txn *coin.Transaction, inputs []visor.TransactionInpu
 		Sigs: sigs,
 		In:   in,
 		Out:  out,
+
+		Tweet: string(txn.Tweet[:]),
 	}, nil
 }
 
@@ -185,6 +189,9 @@ func (r *CreatedTransaction) ToTransaction() (*coin.Transaction, error) {
 
 	t.Out = out
 
+	tmp__ := []byte(r.Tweet)
+	copy(t.Tweet[:], tmp__)
+
 	hash, err := cipher.SHA256FromHex(r.TxID)
 	if err != nil {
 		return nil, err
@@ -239,8 +246,9 @@ func NewCreatedTransactionInput(out visor.TransactionInput) (*CreatedTransaction
 		return nil, err
 	}
 
-	if out.UxOut.Body.SrcTransaction.Null() {
-		return nil, errors.New("NewCreatedTransactionInput UxOut.SrcTransaction is not initialized")
+	if out.UxOut.Head.BkSeq > 0 && out.UxOut.Body.SrcTransaction.Null() {
+		//fmt.Println()
+		return nil, errors.New(fmt.Sprintf("NewCreatedTransactionInput UxOut.SrcTransaction is not initialized [[DEB:%d]]", out.UxOut.Head.BkSeq))
 	}
 
 	addr := out.UxOut.Body.Address.String()
@@ -268,6 +276,7 @@ type createTransactionRequest struct {
 	To                []receiver     `json:"to"`
 	UxOuts            []wh.SHA256    `json:"unspents,omitempty"`
 	Addresses         []wh.Address   `json:"addresses,omitempty"`
+	Tweet             string         `json:"tweet"`
 }
 
 // hoursSelection defines options for hours distribution
@@ -314,7 +323,7 @@ func (r createTransactionRequest) Validate() error {
 		}
 
 		if r.HoursSelection.Mode != "" {
-			return errors.New("hours_selection.mode cannot be used for manual hours_selection.type")
+			return errors.New("hours_secomlection.mode cannot be used for manual hours_selection.type")
 		}
 
 	case "":
@@ -442,6 +451,7 @@ func (r createTransactionRequest) TransactionParams() transaction.Params {
 		},
 		ChangeAddress: changeAddress,
 		To:            to,
+		Tweet:         r.Tweet,
 	}
 }
 

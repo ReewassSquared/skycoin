@@ -97,6 +97,8 @@ func encodeSizeGiveBlocksMessage(obj *GiveBlocksMessage) uint64 {
 				i2 += uint64(len(x2.Out)) * i3
 			}
 
+			i2 += 512
+
 			i1 += i2
 		}
 
@@ -266,6 +268,8 @@ func encodeGiveBlocksMessageToBuffer(buf []byte, obj *GiveBlocksMessage) error {
 				e.Uint64(x.Hours)
 
 			}
+
+			e.CopyBytes(x.Tweet[:])
 
 		}
 
@@ -545,6 +549,9 @@ func decodeGiveBlocksMessage(buf []byte, obj *GiveBlocksMessage) (uint64, error)
 									}
 								}
 							}
+
+							copy(obj.Blocks[z1].Block.Body.Transactions[z5].Tweet[:], d.Buffer[:512])
+							d.Buffer = d.Buffer[512:]
 						}
 					}
 				}

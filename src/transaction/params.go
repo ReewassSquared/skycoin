@@ -60,6 +60,7 @@ var (
 	ErrInvalidShareFactor = NewError(errors.New("HoursSelection.ShareFactor can only be used for share mode"))
 	// ErrShareFactorOutOfRange HoursSelection.ShareFactor must be >= 0 and <= 1
 	ErrShareFactorOutOfRange = NewError(errors.New("HoursSelection.ShareFactor must be >= 0 and <= 1"))
+	ErrTweetTooBig           = NewError(errors.New("Invalid Tweet: too big!"))
 )
 
 // HoursSelection defines options for hours distribution
@@ -74,6 +75,7 @@ type Params struct {
 	HoursSelection HoursSelection
 	To             []coin.TransactionOutput
 	ChangeAddress  *cipher.Address
+	Tweet          string
 }
 
 // Validate validates Params
@@ -149,6 +151,10 @@ func (c Params) Validate() error {
 		if c.HoursSelection.ShareFactor.LessThan(zero) || c.HoursSelection.ShareFactor.GreaterThan(one) {
 			return ErrShareFactorOutOfRange
 		}
+	}
+
+	if len([]byte(c.Tweet)) > 512 {
+		return ErrTweetTooBig
 	}
 
 	return nil

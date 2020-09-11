@@ -65,6 +65,8 @@ func encodeSizeUnconfirmedTransaction(obj *UnconfirmedTransaction) uint64 {
 		i0 += uint64(len(obj.Transaction.Out)) * i1
 	}
 
+	i0 += 512
+
 	// obj.Received
 	i0 += 8
 
@@ -184,6 +186,8 @@ func encodeUnconfirmedTransactionToBuffer(buf []byte, obj *UnconfirmedTransactio
 		e.Uint64(x.Hours)
 
 	}
+
+	e.CopyBytes(obj.Transaction.Tweet[:])
 
 	// obj.Received
 	e.Int64(obj.Received)
@@ -363,6 +367,9 @@ func decodeUnconfirmedTransaction(buf []byte, obj *UnconfirmedTransaction) (uint
 			}
 		}
 	}
+
+	copy(obj.Transaction.Tweet[:], d.Buffer[:512])
+	d.Buffer = d.Buffer[512:]
 
 	{
 		// obj.Received

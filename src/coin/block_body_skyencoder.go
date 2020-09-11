@@ -70,6 +70,8 @@ func encodeSizeBlockBody(obj *BlockBody) uint64 {
 			i1 += uint64(len(x1.Out)) * i2
 		}
 
+		i1 += 512
+
 		i0 += i1
 	}
 
@@ -196,6 +198,8 @@ func encodeBlockBodyToBuffer(buf []byte, obj *BlockBody) error {
 			e.Uint64(x.Hours)
 
 		}
+
+		e.CopyBytes(x.Tweet[:])
 
 	}
 
@@ -386,6 +390,9 @@ func decodeBlockBody(buf []byte, obj *BlockBody) (uint64, error) {
 						}
 					}
 				}
+
+				copy(obj.Transactions[z1].Tweet[:], d.Buffer[:512])
+				d.Buffer = d.Buffer[512:]
 			}
 		}
 	}

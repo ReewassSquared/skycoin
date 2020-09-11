@@ -66,6 +66,8 @@ func encodeSizeTransaction(obj *coin.Transaction) uint64 {
 		i0 += uint64(len(obj.Out)) * i1
 	}
 
+	i0 += 512
+
 	return i0
 }
 
@@ -173,6 +175,8 @@ func encodeTransactionToBuffer(buf []byte, obj *coin.Transaction) error {
 		e.Uint64(x.Hours)
 
 	}
+
+	e.CopyBytes(obj.Tweet[:])
 
 	return nil
 }
@@ -340,6 +344,9 @@ func decodeTransaction(buf []byte, obj *coin.Transaction) (uint64, error) {
 			}
 		}
 	}
+
+	copy(obj.Tweet[:], d.Buffer[:512])
+	d.Buffer = d.Buffer[512:]
 
 	return uint64(len(buf) - len(d.Buffer)), nil
 }

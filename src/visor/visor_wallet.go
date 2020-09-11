@@ -215,6 +215,7 @@ type CreateTransactionParams struct {
 	// IgnoreUnconfirmed if true, outputs matching Addresses or UxOuts spent by
 	// an unconfirmed transactions will be ignored, otherwise an error will be returned
 	IgnoreUnconfirmed bool
+	Tweet             [512]byte
 }
 
 // Validate validates params
