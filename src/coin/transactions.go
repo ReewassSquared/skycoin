@@ -63,10 +63,15 @@ type Transaction struct {
 }
 
 // TransactionOutput hash output/name is function of Hash
+/*
+ * Coins have been replaced with a length-prefixed array of NFTs.
+ *
+ *
+ */
 type TransactionOutput struct {
-	Address cipher.Address // address to send to
-	Coins   uint64         // amount to be sent in coins
-	Hours   uint64         // amount to be sent in coin hours
+	Address cipher.Address  // address to send to
+	Coins   []cipher.SHA256 // coins, which is length prefixed array of NFTs.
+	Hours   uint64          // amount to be sent in coin hours
 }
 
 // Verify attempts to determine if the transaction is well formed.
@@ -124,20 +129,26 @@ func (txn *Transaction) verify(signed bool) error {
 	// Prevent zero coin outputs
 	// Artificial restriction to prevent spam
 	for _, txo := range txn.Out {
-		if txo.Coins == 0 {
-			return errors.New("Zero coin output")
+		if txo.Coins == nil || len(txo.Coins) == 0 {
+			return errors.New("Zero coin outputs")
 		}
+
+		/*for _, tcnft_ := range txo.Coins {
+			if cipher. tcnft_ {
+				return errors.New("Zero coin output")
+			}
+		}*/
 	}
 
-	// Check output coin integer overflow
-	coins := uint64(0)
-	for _, to := range txn.Out {
+	// check that there are
+	//coins := uint64(0)
+	/*for _, to := range txn.Out {
 		var err error
 		coins, err = mathutil.AddUint64(coins, to.Coins)
 		if err != nil {
 			return errors.New("Output coins overflow")
 		}
-	}
+	}*/
 
 	// Check that Size and Hash can be computed
 	txnSize, txnHash, err := txn.SizeHash()
@@ -289,7 +300,7 @@ func (txOut TransactionOutput) UxID(txID cipher.SHA256) cipher.SHA256 {
 }
 
 // PushOutput Adds a TransactionOutput, sending coins & hours to an Address
-func (txn *Transaction) PushOutput(dst cipher.Address, coins, hours uint64) error {
+func (txn *Transaction) PushOutput(dst cipher.Address, coins []cipher.SHA256, hours uint64) error {
 	if len(txn.Out) >= math.MaxUint16 {
 		return errors.New("Max transaction outputs reached")
 	}
@@ -721,29 +732,39 @@ func (txns SortableTransactions) Swap(i, j int) {
 
 // VerifyTransactionCoinsSpending checks that coins are not destroyed or created by the transaction
 func VerifyTransactionCoinsSpending(uxIn UxArray, uxOut UxArray) error {
-	coinsIn := uint64(0)
+	coinsIn := []cipher.SHA256{}
 	for i := range uxIn {
-		var err error
-		coinsIn, err = mathutil.AddUint64(coinsIn, uxIn[i].Body.Coins)
-		if err != nil {
-			return errors.New("Transaction input coins overflow")
-		}
+		coinsIn = append(coinsIn, uxIn[i].Body.Coins...)
 	}
 
-	coinsOut := uint64(0)
+	coinsOut := []cipher.SHA256{}
 	for i := range uxOut {
-		var err error
-		coinsOut, err = mathutil.AddUint64(coinsOut, uxOut[i].Body.Coins)
-		if err != nil {
-			return errors.New("Transaction output coins overflow")
+		coinsOut = append(coinsOut, uxOut[i].Body.Coins...)
+	}
+
+	/* iterate through the inputs.
+	 * adds all unmatched inputs to a slice.
+	 */
+	if len(coinsIn) != len(coinsOut) {
+		return errors.New(fmt.Sprintf("Number of input tokens doesn't match output tokens: %d != %d", len(coinsIn), len(coinsOut)))
+	}
+
+	dif_ := []cipher.SHA256{}
+	for i := 0; i < len(coinsIn); i++ {
+		bct_ := true
+		for j := 0; j < len(coinsOut); j++ {
+			if coinsIn[i] == coinsOut[j] {
+				bct_ = false
+				break
+			}
+		}
+		if bct_ {
+			dif_ = append(dif_, coinsIn[i])
 		}
 	}
 
-	if coinsIn < coinsOut {
-		return errors.New("Insufficient coins")
-	}
-	if coinsIn > coinsOut {
-		return errors.New("Transactions may not destroy coins")
+	if len(dif_) > 0 {
+		return errors.New("Tokens created or destroyed in Transaction, illegal")
 	}
 
 	return nil

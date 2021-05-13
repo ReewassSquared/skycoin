@@ -47,7 +47,7 @@ func encodeSizeTransaction(obj *Transaction) uint64 {
 
 	// obj.Out
 	i0 += 4
-	{
+	for z1, _ := range obj.Out {
 		i1 := uint64(0)
 
 		// x1.Address.Version
@@ -57,12 +57,16 @@ func encodeSizeTransaction(obj *Transaction) uint64 {
 		i1 += 20
 
 		// x1.Coins
-		i1 += 8
+		i1 += 4
+		{
+			i2 := uint64(32)
+			i1 += uint64(len(obj.Out[z1].Coins)) * i2
+		}
 
 		// x1.Hours
 		i1 += 8
 
-		i0 += uint64(len(obj.Out)) * i1
+		i0 += i1
 	}
 
 	return i0
@@ -166,7 +170,10 @@ func encodeTransactionToBuffer(buf []byte, obj *Transaction) error {
 		e.CopyBytes(x.Address.Key[:])
 
 		// x.Coins
-		e.Uint64(x.Coins)
+		e.Uint32(uint32(len(x.Coins)))
+		for _, xnft := range x.Coins {
+			e.CopyBytes(xnft[:])
+		}
 
 		// x.Hours
 		e.Uint64(x.Hours)
@@ -319,12 +326,25 @@ func decodeTransaction(buf []byte, obj *Transaction) (uint64, error) {
 				}
 
 				{
-					// obj.Out[z1].Coins
-					i, err := d.Uint64()
+					ul2, err := d.Uint32()
 					if err != nil {
 						return 0, err
 					}
-					obj.Out[z1].Coins = i
+
+					length2 := int(ul2)
+					if length2 < 0 || length2 > len(d.Buffer) {
+						return 0, encoder.ErrBufferUnderflow
+					}
+					// obj.Out[z1].Coins
+					obj.Out[z1].Coins = make([]cipher.SHA256, length2)
+					for z2 := 0; z2 < length2; z2++ {
+						hsh_, err := cipher.SHA256FromBytes(d.Buffer[:32])
+						if err != nil {
+							return 0, err
+						}
+						obj.Out[z1].Coins[z2] = hsh_
+						d.Buffer = d.Buffer[32:]
+					}
 				}
 
 				{

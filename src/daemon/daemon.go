@@ -254,7 +254,7 @@ func NewDaemonConfig() DaemonConfig {
 		UnconfirmedRemoveInvalidRate: time.Minute,
 		Mirror:                       rand.New(rand.NewSource(time.Now().UTC().UnixNano())).Uint32(),
 		UnconfirmedVerifyTxn:         params.UserVerifyTxn,
-		MaxOutgoingMessageLength:     256 * 1024,
+		MaxOutgoingMessageLength:     1024 * 256 * 1024,
 		MaxIncomingMessageLength:     1024 * 1024,
 		MaxBlockTransactionsSize:     32768,
 	}

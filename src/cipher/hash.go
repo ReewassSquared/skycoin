@@ -77,6 +77,16 @@ func HashRipemd160(data []byte) Ripemd160 {
 // SHA256 32 bytes
 type SHA256 [32]byte
 
+func CompareSHA256(a, b SHA256) int {
+	for i := 0; i < 32; i++ {
+		if a[i] == b[i] {
+			continue
+		}
+		return int(a[i]) - int(b[i])
+	}
+	return 0
+}
+
 // MustSet sets value, panics on error
 func (g *SHA256) MustSet(b []byte) {
 	if len(b) != 32 {

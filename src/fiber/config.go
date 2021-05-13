@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/SkycoinProject/skycoin/src/cipher"
 	"github.com/SkycoinProject/skycoin/src/cipher/bip44"
 )
 
@@ -37,7 +38,7 @@ type NodeConfig struct {
 	// GenesisTimestamp is the timestamp of the genesis block
 	GenesisTimestamp uint64 `mapstructure:"genesis_timestamp"`
 	// GenesisCoinVolume is the total number of coins in the genesis block
-	GenesisCoinVolume uint64 `mapstructure:"genesis_coin_volume"`
+	GenesisCoinVolume []cipher.SHA256 `mapstructure:"genesis_coin_volume"`
 	// DefaultConnections are the default "trusted" connections a node will try to connect to for bootstrapping
 	DefaultConnections []string `mapstructure:"default_connections"`
 	// PeerlistURL is a URL pointing to a newline-separated list of ip:ports that are used for bootstrapping (but they are not "trusted")
@@ -85,7 +86,7 @@ type NodeConfig struct {
 // may need to be imported by libraries that would not know the node's configured CLI options.
 type ParamsConfig struct {
 	// MaxCoinSupply is the maximum supply of coins
-	MaxCoinSupply uint64 `mapstructure:"max_coin_supply"`
+	MaxCoinSupply []cipher.SHA256 `mapstructure:"max_coin_supply"`
 	// InitialUnlockedCount is the initial number of unlocked addresses
 	InitialUnlockedCount uint64 `mapstructure:"initial_unlocked_count"`
 	// UnlockAddressRate is the number of addresses to unlock per unlock time interval
@@ -143,7 +144,7 @@ func NewConfig(configName, appDir string) (Config, error) {
 
 func setDefaults() {
 	// node defaults
-	viper.SetDefault("node.genesis_coin_volume", 100e12)
+	viper.SetDefault("node.genesis_coin_volume", nil)
 	viper.SetDefault("node.port", 6000)
 	viper.SetDefault("node.web_interface_port", 6420)
 	viper.SetDefault("node.unconfirmed_burn_factor", 10)
@@ -167,7 +168,7 @@ func setDefaults() {
 	viper.SetDefault("build.branch", "")
 
 	// params defaults
-	viper.SetDefault("params.max_coin_supply", 1e8)
+	viper.SetDefault("params.max_coin_supply", nil)
 	viper.SetDefault("params.initial_unlocked_count", 25)
 	viper.SetDefault("params.unlock_address_rate", 5)
 	viper.SetDefault("params.unlock_time_interval", 60*60*24*365)

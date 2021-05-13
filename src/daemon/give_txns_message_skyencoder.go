@@ -53,7 +53,7 @@ func encodeSizeGiveTxnsMessage(obj *GiveTxnsMessage) uint64 {
 
 		// x1.Out
 		i1 += 4
-		{
+		for _, xnft := range x1.Out {
 			i2 := uint64(0)
 
 			// x2.Address.Version
@@ -63,12 +63,16 @@ func encodeSizeGiveTxnsMessage(obj *GiveTxnsMessage) uint64 {
 			i2 += 20
 
 			// x2.Coins
-			i2 += 8
+			i2 += 4
+			{
+				i3 := uint64(32)
+				i2 += uint64(len(xnft.Coins)) * i3
+			}
 
 			// x2.Hours
 			i2 += 8
 
-			i1 += uint64(len(x1.Out)) * i2
+			i1 += i2
 		}
 
 		i0 += i1
@@ -191,7 +195,10 @@ func encodeGiveTxnsMessageToBuffer(buf []byte, obj *GiveTxnsMessage) error {
 			e.CopyBytes(x.Address.Key[:])
 
 			// x.Coins
-			e.Uint64(x.Coins)
+			e.Uint32(uint32(len(x.Coins)))
+			for _, xnft := range x.Coins {
+				e.CopyBytes(xnft[:])
+			}
 
 			// x.Hours
 			e.Uint64(x.Hours)
@@ -367,12 +374,25 @@ func decodeGiveTxnsMessage(buf []byte, obj *GiveTxnsMessage) (uint64, error) {
 							}
 
 							{
-								// obj.Transactions[z1].Out[z3].Coins
-								i, err := d.Uint64()
+								ul2, err := d.Uint32()
 								if err != nil {
 									return 0, err
 								}
-								obj.Transactions[z1].Out[z3].Coins = i
+
+								length2 := int(ul2)
+								if length2 < 0 || length2 > len(d.Buffer) {
+									return 0, encoder.ErrBufferUnderflow
+								}
+								// obj.Out[z1].Coins
+								obj.Transactions[z1].Out[z3].Coins = make([]cipher.SHA256, length2)
+								for z4 := 0; z4 < length2; z4++ {
+									hsh_, err := cipher.SHA256FromBytes(d.Buffer[:32])
+									if err != nil {
+										return 0, err
+									}
+									obj.Transactions[z1].Out[z3].Coins[z4] = hsh_
+									d.Buffer = d.Buffer[32:]
+								}
 							}
 
 							{

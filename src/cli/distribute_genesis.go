@@ -9,7 +9,6 @@ import (
 	"github.com/SkycoinProject/skycoin/src/cipher"
 	"github.com/SkycoinProject/skycoin/src/coin"
 	"github.com/SkycoinProject/skycoin/src/params"
-	"github.com/SkycoinProject/skycoin/src/util/droplet"
 )
 
 func distributeGenesisCmd() *cobra.Command {
@@ -104,9 +103,9 @@ func getGenesisUxID() (string, error) {
 func createDistributionTransaction(uxID string, genesisSecKey cipher.SecKey, p params.Distribution) (*coin.Transaction, error) {
 	// Sanity check
 	addrs := p.AddressesDecoded()
-	if p.MaxCoinSupply%uint64(len(addrs)) != 0 {
+	/*if p.MaxCoinSupply%uint64(len(addrs)) != 0 {
 		return nil, errors.New("the number of distribution addresses must divide MaxCoinSupply exactly")
-	}
+	}*/
 
 	var txn coin.Transaction
 
@@ -119,11 +118,11 @@ func createDistributionTransaction(uxID string, genesisSecKey cipher.SecKey, p p
 		return nil, err
 	}
 
-	coins := (p.MaxCoinSupply / uint64(len(addrs))) * droplet.Multiplier
+	coins := p.MaxCoinSupply
 	hours := uint64(1000)
 
-	for _, addr := range addrs {
-		if err := txn.PushOutput(addr, coins, hours); err != nil {
+	for i, addr := range addrs {
+		if err := txn.PushOutput(addr, divvyUpDemCoinsBabyyyy(len(addrs), i, coins), hours); err != nil {
 			return nil, err
 		}
 	}
@@ -144,4 +143,13 @@ func createDistributionTransaction(uxID string, genesisSecKey cipher.SecKey, p p
 	}
 
 	return &txn, nil
+}
+
+func divvyUpDemCoinsBabyyyy(naddr, i int, coins []cipher.SHA256) []cipher.SHA256 {
+	rcoins := []cipher.SHA256{}
+	for j := (len(coins) / naddr) * i; j < (len(coins)/naddr)*(i+1); j++ {
+		rcoins = append(rcoins, coins[j])
+	}
+
+	return rcoins
 }

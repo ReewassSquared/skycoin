@@ -2,7 +2,10 @@
 
 package coin
 
-import "github.com/SkycoinProject/skycoin/src/cipher/encoder"
+import (
+	"github.com/SkycoinProject/skycoin/src/cipher"
+	"github.com/SkycoinProject/skycoin/src/cipher/encoder"
+)
 
 // encodeSizeUxBody computes the size of an encoded object of type UxBody
 func encodeSizeUxBody(obj *UxBody) uint64 {
@@ -18,7 +21,11 @@ func encodeSizeUxBody(obj *UxBody) uint64 {
 	i0 += 20
 
 	// obj.Coins
-	i0 += 8
+	i0 += 4
+	{
+		i1 := uint64(32)
+		i0 += uint64(len(obj.Coins)) * i1
+	}
 
 	// obj.Hours
 	i0 += 8
@@ -60,7 +67,11 @@ func encodeUxBodyToBuffer(buf []byte, obj *UxBody) error {
 	e.CopyBytes(obj.Address.Key[:])
 
 	// obj.Coins
-	e.Uint64(obj.Coins)
+	e.Uint32(uint32(len(obj.Coins)))
+	for _, xnft := range obj.Coins {
+		e.CopyBytes(xnft[:])
+	}
+	//e.Uint64(obj.Coins)
 
 	// obj.Hours
 	e.Uint64(obj.Hours)
@@ -104,12 +115,25 @@ func decodeUxBody(buf []byte, obj *UxBody) (uint64, error) {
 	}
 
 	{
-		// obj.Coins
-		i, err := d.Uint64()
+		ul2, err := d.Uint32()
 		if err != nil {
 			return 0, err
 		}
-		obj.Coins = i
+
+		length2 := int(ul2)
+		if length2 < 0 || length2 > len(d.Buffer) {
+			return 0, encoder.ErrBufferUnderflow
+		}
+		// obj.Out[z1].Coins
+		obj.Coins = make([]cipher.SHA256, length2)
+		for z2 := 0; z2 < length2; z2++ {
+			hsh_, err := cipher.SHA256FromBytes(d.Buffer[:32])
+			if err != nil {
+				return 0, err
+			}
+			obj.Coins[z2] = hsh_
+			d.Buffer = d.Buffer[32:]
+		}
 	}
 
 	{

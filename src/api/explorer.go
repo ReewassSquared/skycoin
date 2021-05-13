@@ -15,11 +15,11 @@ import (
 // CoinSupply records the coin supply info
 type CoinSupply struct {
 	// Coins distributed beyond the project:
-	CurrentSupply string `json:"current_supply"`
+	CurrentSupply []string `json:"current_supply"`
 	// TotalSupply is CurrentSupply plus coins held by the distribution addresses that are spendable
-	TotalSupply string `json:"total_supply"`
+	TotalSupply []string `json:"total_supply"`
 	// MaxSupply is the maximum number of coins to be distributed ever
-	MaxSupply string `json:"max_supply"`
+	MaxSupply []string `json:"max_supply"`
 	// CurrentCoinHourSupply is coins hours in non distribution addresses
 	CurrentCoinHourSupply string `json:"current_coinhour_supply"`
 	// TotalCoinHourSupply is coin hours in all addresses including unlocked distribution addresses
@@ -61,13 +61,13 @@ func coinSupplyHandler(gateway Gatewayer) http.HandlerFunc {
 		// Search map of unlocked addresses, used to filter unspents
 		unlockedAddrSet := newAddrSet(unlockedAddrs)
 
-		var unlockedSupply uint64
+		var unlockedSupply []cipher.SHA256
 		// check confirmed unspents only
 		for _, u := range allUnspents.Confirmed {
 			// check if address is an unlocked distribution address
 			if _, ok := unlockedAddrSet[u.Body.Address]; ok {
 				var err error
-				unlockedSupply, err = mathutil.AddUint64(unlockedSupply, u.Body.Coins)
+				unlockedSupply = append(unlockedSupply, u.Body.Coins...)
 				if err != nil {
 					err = fmt.Errorf("uint64 overflow while adding up unlocked supply coins: %v", err)
 					wh.Error500(w, err.Error())
@@ -78,11 +78,11 @@ func coinSupplyHandler(gateway Gatewayer) http.HandlerFunc {
 
 		// "total supply" is the number of coins unlocked.
 		// Each distribution address was allocated distribution.AddressInitialBalance coins.
-		totalSupply := uint64(len(unlockedAddrs)) * dist.AddressInitialBalance()
-		totalSupply *= droplet.Multiplier
+		totalSupply := dist.AddressInitialBalance()
+		//totalSupply *= droplet.Multiplier
 
 		// "current supply" is the number of coins distributed from the unlocked pool
-		currentSupply := totalSupply - unlockedSupply
+		currentSupply := totalSupply
 
 		currentSupplyStr, err := droplet.ToString(currentSupply)
 		if err != nil {
@@ -98,7 +98,7 @@ func coinSupplyHandler(gateway Gatewayer) http.HandlerFunc {
 			return
 		}
 
-		maxSupplyStr, err := droplet.ToString(dist.MaxCoinSupply * droplet.Multiplier)
+		maxSupplyStr, err := droplet.ToString(dist.MaxCoinSupply)
 		if err != nil {
 			err = fmt.Errorf("Failed to convert coins to string: %v", err)
 			wh.Error500(w, err.Error())

@@ -81,9 +81,9 @@ func NewBlock(prev Block, currentTime uint64, uxHash cipher.SHA256, txns Transac
 }
 
 // NewGenesisBlock creates genesis block
-func NewGenesisBlock(genesisAddr cipher.Address, genesisCoins, timestamp uint64) (*Block, error) {
+func NewGenesisBlock(genesisAddr cipher.Address, genesisCoins []cipher.SHA256, timestamp uint64) (*Block, error) {
 	txn := Transaction{}
-	if err := txn.PushOutput(genesisAddr, genesisCoins, genesisCoins); err != nil {
+	if err := txn.PushOutput(genesisAddr, genesisCoins, 1e6*uint64(len(genesisCoins))); err != nil {
 		return nil, err
 	}
 	body := BlockBody{Transactions: Transactions{txn}}

@@ -14,8 +14,8 @@ import (
 
 // Balance represents an coin and hours balance
 type Balance struct {
-	Coins string `json:"coins"`
-	Hours string `json:"hours"`
+	Coins []string `json:"coins"`
+	Hours string   `json:"hours"`
 }
 
 // AddressBalances represents an address's balance
@@ -143,7 +143,7 @@ func getBalanceOfAddresses(outs *readable.UnspentOutputsSummary, addrs []string)
 		}
 
 		b := addrBalances[o.Address]
-		b.confirmed.Coins += amt
+		b.confirmed.Coins = append(b.confirmed.Coins, amt...)
 		b.confirmed.Hours += o.CalculatedHours
 
 		addrBalances[o.Address] = b
@@ -161,7 +161,7 @@ func getBalanceOfAddresses(outs *readable.UnspentOutputsSummary, addrs []string)
 		}
 
 		b := addrBalances[o.Address]
-		b.spendable.Coins += amt
+		b.spendable.Coins = append(b.spendable.Coins, amt...)
 		b.spendable.Hours += o.CalculatedHours
 
 		addrBalances[o.Address] = b
@@ -179,7 +179,7 @@ func getBalanceOfAddresses(outs *readable.UnspentOutputsSummary, addrs []string)
 		}
 
 		b := addrBalances[o.Address]
-		b.expected.Coins += amt
+		b.expected.Coins = append(b.expected.Coins, amt...)
 		b.expected.Hours += o.CalculatedHours
 
 		addrBalances[o.Address] = b

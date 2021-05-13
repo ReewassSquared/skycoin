@@ -79,7 +79,7 @@ func encodeSizeGiveBlocksMessage(obj *GiveBlocksMessage) uint64 {
 
 			// x2.Out
 			i2 += 4
-			{
+			for _, xnft := range x2.Out {
 				i3 := uint64(0)
 
 				// x3.Address.Version
@@ -89,12 +89,16 @@ func encodeSizeGiveBlocksMessage(obj *GiveBlocksMessage) uint64 {
 				i3 += 20
 
 				// x3.Coins
-				i3 += 8
+				i3 += 4
+				{
+					i4 := uint64(32)
+					i3 += uint64(len(xnft.Coins)) * i4
+				}
 
 				// x3.Hours
 				i3 += 8
 
-				i2 += uint64(len(x2.Out)) * i3
+				i2 += i3
 			}
 
 			i1 += i2
@@ -260,7 +264,10 @@ func encodeGiveBlocksMessageToBuffer(buf []byte, obj *GiveBlocksMessage) error {
 				e.CopyBytes(x.Address.Key[:])
 
 				// x.Coins
-				e.Uint64(x.Coins)
+				e.Uint32(uint32(len(x.Coins)))
+				for _, xnft := range x.Coins {
+					e.CopyBytes(xnft[:])
+				}
 
 				// x.Hours
 				e.Uint64(x.Hours)
@@ -525,12 +532,25 @@ func decodeGiveBlocksMessage(buf []byte, obj *GiveBlocksMessage) (uint64, error)
 										}
 
 										{
-											// obj.Blocks[z1].Block.Body.Transactions[z5].Out[z7].Coins
-											i, err := d.Uint64()
+											ul2, err := d.Uint32()
 											if err != nil {
 												return 0, err
 											}
-											obj.Blocks[z1].Block.Body.Transactions[z5].Out[z7].Coins = i
+
+											length2 := int(ul2)
+											if length2 < 0 || length2 > len(d.Buffer) {
+												return 0, encoder.ErrBufferUnderflow
+											}
+											// obj.Out[z1].Coins
+											obj.Blocks[z1].Block.Body.Transactions[z5].Out[z7].Coins = make([]cipher.SHA256, length2)
+											for z8 := 0; z8 < length2; z8++ {
+												hsh_, err := cipher.SHA256FromBytes(d.Buffer[:32])
+												if err != nil {
+													return 0, err
+												}
+												obj.Blocks[z1].Block.Body.Transactions[z5].Out[z7].Coins[z8] = hsh_
+												d.Buffer = d.Buffer[32:]
+											}
 										}
 
 										{

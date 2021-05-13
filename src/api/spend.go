@@ -11,7 +11,6 @@ import (
 
 	"github.com/SkycoinProject/skycoin/src/cipher"
 	"github.com/SkycoinProject/skycoin/src/coin"
-	"github.com/SkycoinProject/skycoin/src/params"
 	"github.com/SkycoinProject/skycoin/src/transaction"
 	"github.com/SkycoinProject/skycoin/src/util/droplet"
 	"github.com/SkycoinProject/skycoin/src/util/fee"
@@ -199,10 +198,10 @@ func (r *CreatedTransaction) ToTransaction() (*coin.Transaction, error) {
 
 // CreatedTransactionOutput is a transaction output
 type CreatedTransactionOutput struct {
-	UxID    string `json:"uxid"`
-	Address string `json:"address"`
-	Coins   string `json:"coins"`
-	Hours   string `json:"hours"`
+	UxID    string   `json:"uxid"`
+	Address string   `json:"address"`
+	Coins   []string `json:"coins"`
+	Hours   string   `json:"hours"`
 }
 
 // NewCreatedTransactionOutput creates CreatedTransactionOutput
@@ -222,14 +221,14 @@ func NewCreatedTransactionOutput(out coin.TransactionOutput, txid cipher.SHA256)
 
 // CreatedTransactionInput is a verbose transaction input
 type CreatedTransactionInput struct {
-	UxID            string `json:"uxid"`
-	Address         string `json:"address,omitempty"`
-	Coins           string `json:"coins,omitempty"`
-	Hours           string `json:"hours,omitempty"`
-	CalculatedHours string `json:"calculated_hours,omitempty"`
-	Time            uint64 `json:"timestamp,omitempty"`
-	Block           uint64 `json:"block,omitempty"`
-	TxID            string `json:"txid,omitempty"`
+	UxID            string   `json:"uxid"`
+	Address         string   `json:"address,omitempty"`
+	Coins           []string `json:"coins,omitempty"`
+	Hours           string   `json:"hours,omitempty"`
+	CalculatedHours string   `json:"calculated_hours,omitempty"`
+	Time            uint64   `json:"timestamp,omitempty"`
+	Block           uint64   `json:"block,omitempty"`
+	TxID            string   `json:"txid,omitempty"`
 }
 
 // NewCreatedTransactionInput creates CreatedTransactionInput
@@ -239,7 +238,7 @@ func NewCreatedTransactionInput(out visor.TransactionInput) (*CreatedTransaction
 		return nil, err
 	}
 
-	if out.UxOut.Body.SrcTransaction.Null() {
+	if out.UxOut.Body.SrcTransaction.Null() && out.UxOut.Head.BkSeq > 0 {
 		return nil, errors.New("NewCreatedTransactionInput UxOut.SrcTransaction is not initialized")
 	}
 
@@ -376,13 +375,13 @@ func (r createTransactionRequest) Validate() error {
 			return fmt.Errorf("to[%d].address is empty", i)
 		}
 
-		if to.Coins == 0 {
+		if len(to.Coins) == 0 {
 			return fmt.Errorf("to[%d].coins must not be zero", i)
 		}
 
-		if to.Coins.Value()%params.UserVerifyTxn.MaxDropletDivisor() != 0 {
+		/*if to.Coins.Value()%params.UserVerifyTxn.MaxDropletDivisor() != 0 {
 			return fmt.Errorf("to[%d].coins has too many decimal places", i)
-		}
+		}*/
 	}
 
 	// Check for duplicate created outputs, a transaction can't have outputs with
@@ -390,7 +389,7 @@ func (r createTransactionRequest) Validate() error {
 	// Auto mode would distribute hours to the outputs and could hypothetically
 	// avoid assigning duplicate hours in many cases, but the complexity for doing
 	// so is very high, so also reject duplicate (address, coins) for auto mode.
-	outputs := make(map[coin.TransactionOutput]struct{}, len(r.To))
+	outputs := make(map[*coin.TransactionOutput]struct{}, len(r.To))
 	for _, to := range r.To {
 		var hours uint64
 		if to.Hours != nil {
@@ -403,11 +402,11 @@ func (r createTransactionRequest) Validate() error {
 			Hours:   hours,
 		}
 
-		if _, ok := outputs[txo]; ok {
+		if _, ok := outputs[&txo]; ok {
 			return errors.New("to contains duplicate values")
 		}
 
-		outputs[txo] = struct{}{}
+		outputs[&txo] = struct{}{}
 	}
 
 	return nil

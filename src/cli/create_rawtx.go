@@ -18,7 +18,6 @@ import (
 	"github.com/SkycoinProject/skycoin/src/transaction"
 	"github.com/SkycoinProject/skycoin/src/util/droplet"
 	"github.com/SkycoinProject/skycoin/src/util/fee"
-	"github.com/SkycoinProject/skycoin/src/util/mathutil"
 	"github.com/SkycoinProject/skycoin/src/visor"
 	"github.com/SkycoinProject/skycoin/src/wallet"
 )
@@ -31,12 +30,12 @@ var (
 // SendAmount represents an amount to send to an address
 type SendAmount struct {
 	Addr  string
-	Coins uint64
+	Coins []cipher.SHA256
 }
 
 type sendAmountJSON struct {
-	Addr  string `json:"addr"`
-	Coins string `json:"coins"`
+	Addr  string   `json:"addr"`
+	Coins []string `json:"coins"`
 }
 
 func createRawTxnCmd() *cobra.Command {
@@ -280,7 +279,7 @@ func getToAddressesV2(c *cobra.Command, args []string) ([]api.Receiver, error) {
 	}
 
 	coins := args[1]
-	if _, err := droplet.FromString(coins); err != nil {
+	if _, err := droplet.FromString([]string{coins}); err != nil {
 		return nil, err
 	}
 
@@ -441,7 +440,7 @@ func parseSendAmountsFromCSV(fields [][]string) ([]SendAmount, error) {
 			continue
 		}
 
-		coins, err := droplet.FromString(f[1])
+		coins, err := droplet.FromString([]string{f[1]})
 		if err != nil {
 			err = fmt.Errorf("[row %d] Invalid amount %s: %v", i, f[1], err)
 			errs = append(errs, err)
@@ -482,7 +481,7 @@ func parseReceiversFromCSV(fields [][]string) ([]api.Receiver, error) {
 			continue
 		}
 
-		_, err := droplet.FromString(f[1])
+		_, err := droplet.FromString([]string{f[1]})
 		if err != nil {
 			err = fmt.Errorf("[row %d] Invalid amount %s: %v", i, f[1], err)
 			errs = append(errs, err)
@@ -533,11 +532,11 @@ func parseSendAmountsFromJSON(m string) ([]SendAmount, error) {
 	return sendAmts, nil
 }
 
-func getAmount(args []string) (uint64, error) {
+func getAmount(args []string) ([]cipher.SHA256, error) {
 	amount := args[1]
-	amt, err := droplet.FromString(amount)
+	amt, err := droplet.FromString([]string{amount})
 	if err != nil {
-		return 0, fmt.Errorf("invalid amount: %v", err)
+		return []cipher.SHA256{}, fmt.Errorf("invalid amount: %v", err)
 	}
 
 	return amt, nil
@@ -619,7 +618,7 @@ func validateSendAmounts(toAddrs []SendAmount) error {
 			return ErrAddress
 		}
 
-		if arg.Coins == 0 {
+		if len(arg.Coins) == 0 {
 			return errors.New("Cannot send 0 coins")
 		}
 	}
@@ -801,10 +800,10 @@ func CreateRawTxn(c GetOutputser, wlt wallet.Wallet, inAddrs []string, chgAddr s
 
 func createRawTxn(uxouts *readable.UnspentOutputsSummary, wlt wallet.Wallet, chgAddr string, toAddrs []SendAmount, password []byte) (*coin.Transaction, error) {
 	// Calculate total required coins
-	var totalCoins uint64
+	var totalCoins []cipher.SHA256
 	for _, arg := range toAddrs {
 		var err error
-		totalCoins, err = mathutil.AddUint64(totalCoins, arg.Coins)
+		totalCoins = append(totalCoins, arg.Coins...)
 		if err != nil {
 			return nil, err
 		}
@@ -851,7 +850,7 @@ func createRawTxn(uxouts *readable.UnspentOutputsSummary, wlt wallet.Wallet, chg
 	return makeTxn()
 }
 
-func chooseSpends(uxouts *readable.UnspentOutputsSummary, coins uint64) ([]transaction.UxBalance, error) {
+func chooseSpends(uxouts *readable.UnspentOutputsSummary, coins []cipher.SHA256) ([]transaction.UxBalance, error) {
 	// Convert spendable unspent outputs to []transaction.UxBalance
 	spendableOutputs, err := readable.OutputsToUxBalances(uxouts.SpendableOutputs())
 	if err != nil {
@@ -887,10 +886,11 @@ func chooseSpends(uxouts *readable.UnspentOutputsSummary, coins uint64) ([]trans
 }
 
 func makeChangeOut(outs []transaction.UxBalance, chgAddr string, toAddrs []SendAmount) ([]coin.TransactionOutput, error) {
-	var totalInCoins, totalInHours, totalOutCoins uint64
+	var totalInCoins, totalOutCoins []cipher.SHA256
+	var totalInHours uint64
 
 	for _, o := range outs {
-		totalInCoins += o.Coins
+		totalInCoins = append(totalInCoins, o.Coins...)
 		totalInHours += o.Hours
 	}
 
@@ -899,17 +899,17 @@ func makeChangeOut(outs []transaction.UxBalance, chgAddr string, toAddrs []SendA
 	}
 
 	for _, to := range toAddrs {
-		totalOutCoins += to.Coins
+		totalOutCoins = append(totalOutCoins, to.Coins...)
 	}
 
-	if totalInCoins < totalOutCoins {
+	if len(coin.CompareNFTCoins(totalOutCoins, totalInCoins)) != 0 {
 		return nil, transaction.ErrInsufficientBalance
 	}
 
 	outAddrs := []coin.TransactionOutput{}
-	changeAmount := totalInCoins - totalOutCoins
+	changeAmount := coin.CompareNFTCoins(totalInCoins, totalOutCoins)
 
-	haveChange := changeAmount > 0
+	haveChange := len(changeAmount) > 0
 	nAddrs := uint64(len(toAddrs))
 	changeHours, addrHours, totalOutHours := transaction.DistributeSpendHours(totalInHours, nAddrs, haveChange)
 
@@ -926,17 +926,17 @@ func makeChangeOut(outs []transaction.UxBalance, chgAddr string, toAddrs []SendA
 			// the coinhours are capped to a maximum of incoming coins for the address
 			// if incoming coins < 1 then the cap is set to 1 coinhour
 
-			spendCoinsAmt := to.Coins / 1e6
-			if spendCoinsAmt == 0 {
-				spendCoinsAmt = 1
+			spendCoinsAmt := to.Coins
+			if len(spendCoinsAmt) == 0 {
+				return nil, errors.New("Cannot spend zero coins")
 			}
 
 			// allow addrHours to be less than the incoming coins of the address but not more
-			if addrHours[i] > spendCoinsAmt {
+			/*if addrHours[i] > spendCoinsAmt {
 				// cap the addrHours, move the difference to changeHours
 				changeHours += addrHours[i] - spendCoinsAmt
 				addrHours[i] = spendCoinsAmt
-			}
+			} */
 		}
 
 		outAddrs = append(outAddrs, mustMakeUtxoOutput(to.Addr, to.Coins, addrHours[i]))
@@ -949,7 +949,7 @@ func makeChangeOut(outs []transaction.UxBalance, chgAddr string, toAddrs []SendA
 	return outAddrs, nil
 }
 
-func mustMakeUtxoOutput(addr string, coins, hours uint64) coin.TransactionOutput {
+func mustMakeUtxoOutput(addr string, coins []cipher.SHA256, hours uint64) coin.TransactionOutput {
 	uo := coin.TransactionOutput{}
 	uo.Address = cipher.MustDecodeBase58Address(addr)
 	uo.Coins = coins

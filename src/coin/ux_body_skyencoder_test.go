@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/SkycoinProject/encodertest"
 	"github.com/SkycoinProject/skycoin/src/cipher/encoder"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func newEmptyUxBodyForEncodeTest() *UxBody {

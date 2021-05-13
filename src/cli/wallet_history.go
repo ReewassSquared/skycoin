@@ -11,6 +11,8 @@ import (
 	cobra "github.com/spf13/cobra"
 
 	"github.com/SkycoinProject/skycoin/src/api"
+	"github.com/SkycoinProject/skycoin/src/cipher"
+	"github.com/SkycoinProject/skycoin/src/coin"
 	"github.com/SkycoinProject/skycoin/src/readable"
 	"github.com/SkycoinProject/skycoin/src/util/droplet"
 	"github.com/SkycoinProject/skycoin/src/wallet"
@@ -21,11 +23,11 @@ type AddrHistory struct {
 	BlockSeq  uint64    `json:"-"`
 	Txid      string    `json:"txid"`
 	Address   string    `json:"address"`
-	Amount    string    `json:"amount"`
+	Amount    []string  `json:"amount"`
 	Timestamp time.Time `json:"timestamp"`
 	Status    int       `json:"status"`
 
-	coins uint64
+	coins []cipher.SHA256
 }
 
 type byTime []AddrHistory
@@ -97,7 +99,9 @@ func makeAddrHisArray(c *api.Client, addr string, uxOuts []readable.SpentOutput)
 	var spentBlkSeqMap = map[uint64]bool{}
 
 	for _, u := range uxOuts {
-		amount, err := droplet.ToString(u.Coins)
+		amount := u.Coins
+
+		coins_, err := droplet.FromString(u.Coins)
 		if err != nil {
 			return nil, err
 		}
@@ -109,8 +113,13 @@ func makeAddrHisArray(c *api.Client, addr string, uxOuts []readable.SpentOutput)
 			Amount:    amount,
 			Timestamp: time.Unix(int64(u.Time), 0).UTC(),
 			Status:    1,
-			coins:     u.Coins,
+			coins:     coins_,
 		})
+
+		coins__, err := droplet.FromString(u.Coins)
+		if err != nil {
+			return nil, err
+		}
 
 		// the SpentBlockSeq will be 0 if the uxout has not been spent yet.
 		if u.SpentBlockSeq != 0 {
@@ -119,9 +128,9 @@ func makeAddrHisArray(c *api.Client, addr string, uxOuts []readable.SpentOutput)
 				BlockSeq: u.SpentBlockSeq,
 				Address:  addr,
 				Txid:     u.SpentTxnID,
-				Amount:   "-" + amount,
+				Amount:   amount,
 				Status:   1,
-				coins:    u.Coins,
+				coins:    coins__,
 			})
 		}
 	}
@@ -161,20 +170,20 @@ func makeAddrHisArray(c *api.Client, addr string, uxOuts []readable.SpentOutput)
 	}
 
 	for txid, hs := range hisMap {
-		var receivedCoins, spentCoins, coins uint64
+		var receivedCoins, spentCoins, coins []cipher.SHA256
 		for _, h := range hs.received {
-			receivedCoins += h.coins
+			receivedCoins = append(receivedCoins, h.coins...)
 		}
 		for _, h := range hs.spent {
-			spentCoins += h.coins
+			spentCoins = append(spentCoins, h.coins...)
 		}
 
-		isNegative := spentCoins > receivedCoins
+		isNegative := len(spentCoins) > len(receivedCoins)
 
-		if spentCoins > receivedCoins {
-			coins = spentCoins - receivedCoins
+		if len(spentCoins) > len(receivedCoins) {
+			coins = coin.CompareNFTCoins(spentCoins, receivedCoins)
 		} else {
-			coins = receivedCoins - spentCoins
+			coins = coin.CompareNFTCoins(receivedCoins, spentCoins)
 		}
 
 		amount, err := droplet.ToString(coins)
@@ -183,7 +192,7 @@ func makeAddrHisArray(c *api.Client, addr string, uxOuts []readable.SpentOutput)
 		}
 
 		if isNegative {
-			amount = "-" + amount
+			amount = amount
 		}
 
 		var his AddrHistory

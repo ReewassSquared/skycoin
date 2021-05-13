@@ -54,15 +54,42 @@ type UxHead struct {
 
 // UxBody uxbody
 type UxBody struct {
-	SrcTransaction cipher.SHA256  // Inner Hash of Transaction
-	Address        cipher.Address // Address of receiver
-	Coins          uint64         // Number of coins
-	Hours          uint64         // Coin hours
+	SrcTransaction cipher.SHA256   // Inner Hash of Transaction
+	Address        cipher.Address  // Address of receiver
+	Coins          []cipher.SHA256 // Number of coins
+	Hours          uint64          // Coin hours
 }
 
 // Hash returns the hash of UxBody
 func (uo *UxOut) Hash() cipher.SHA256 {
 	return uo.Body.Hash()
+}
+
+/**
+ * CompareNFTCoins - a is inputs, b is outputs.
+ *
+ * Finds all unmatched inputs in output.
+ * These unmatched inputs in output are then returned
+ * to the caller.
+ *
+ */
+func CompareNFTCoins(a, b []cipher.SHA256) []cipher.SHA256 {
+	dif_ := []cipher.SHA256{}
+	for i := 0; i < len(a); i++ {
+		bct_ := true
+		for j := 0; j < len(b); j++ {
+			if a[i] == b[j] {
+				bct_ = false
+				break
+			}
+		}
+
+		if bct_ {
+			dif_ = append(dif_, a[i])
+		}
+	}
+
+	return dif_
 }
 
 // SnapshotHash returns hash of UxBody + UxHead
@@ -112,7 +139,7 @@ func (uo *UxOut) CoinHours(t uint64) (uint64, error) {
 	seconds := t - uo.Head.Time // number of seconds
 
 	// Calculate whole coin seconds
-	wholeCoins := uo.Body.Coins / 1e6
+	wholeCoins := uint64(1)
 	wholeCoinSeconds, err := mathutil.MultUint64(seconds, wholeCoins)
 	if err != nil {
 		err := fmt.Errorf("UxOut.CoinHours: Calculating whole coin seconds overflows uint64 seconds=%d coins=%d uxid=%s", seconds, wholeCoins, uo.Hash().Hex())
@@ -121,7 +148,7 @@ func (uo *UxOut) CoinHours(t uint64) (uint64, error) {
 	}
 
 	// Calculate remainder droplet seconds
-	remainderDroplets := uo.Body.Coins % 1e6
+	remainderDroplets := uint64(0)
 	dropletSeconds, err := mathutil.MultUint64(seconds, remainderDroplets)
 	if err != nil {
 		err := fmt.Errorf("UxOut.CoinHours: Calculating droplet seconds overflows uint64 seconds=%d droplets=%d uxid=%s", seconds, remainderDroplets, uo.Hash().Hex())
@@ -203,13 +230,11 @@ func (ua UxArray) Swap(i, j int) {
 }
 
 // Coins returns the total coins
-func (ua UxArray) Coins() (uint64, error) {
-	var coins uint64
+func (ua UxArray) Coins() ([]cipher.SHA256, error) {
+	var coins []cipher.SHA256
 	for _, ux := range ua {
-		var err error
-		coins, err = mathutil.AddUint64(coins, ux.Body.Coins)
-		if err != nil {
-			return 0, errors.New("UxArray.Coins addition overflow")
+		for _, uxnft := range ux.Body.Coins {
+			coins = append(coins, uxnft)
 		}
 	}
 

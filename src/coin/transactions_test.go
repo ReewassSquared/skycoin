@@ -1050,7 +1050,7 @@ func TestSortTransactions(t *testing.T) {
 	var txns Transactions
 	for i := 0; i < n; i++ {
 		txn := Transaction{}
-		err := txn.PushOutput(makeAddress(), 1e6, uint64(i*1e3))
+		err := txn.PushOutput(makeAddress(), []cipher.SHA256{cipher.SumSHA256([]byte{0})}, uint64(i*1e3))
 		require.NoError(t, err)
 		err = txn.UpdateHeader()
 		require.NoError(t, err)
